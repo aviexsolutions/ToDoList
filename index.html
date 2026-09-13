@@ -3,50 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Info</title>
-    <link rel="stylesheet" href="style.css">
+    <title>To-Do List</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Contact Information</h1>
-        
-        <form id="contactForm" class="contact-form">
-            <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
-                <span class="error" id="emailError"></span>
+        <h1>To-Do List</h1>
+        <div class="user-selector">
+            <label for="userSelect">Select User:</label>
+            <select id="userSelect">
+                <option value="">Loading users...</option>
+            </select>
+        </div>
+        <div class="todos-container">
+            <h2>Tasks for User <span id="selectedUserName"></span></h2>
+            <div class="stats">
+                <span>Total Tasks: <span id="totalTasks">0</span></span>
+                <span>Completed: <span id="completedTasks">0</span></span>
+                <span>Remaining: <span id="remainingTasks">0</span></span>
             </div>
-
-            <div class="form-group">
-                <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" name="phone" placeholder="(123) 456-7890" required>
-                <span class="error" id="phoneError"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="zipcode">Zip Code:</label>
-                <input type="text" id="zipcode" name="zipcode" placeholder="12345" required>
-                <span class="error" id="zipcodeError"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="dob">Date of Birth:</label>
-                <input type="date" id="dob" name="dob" required>
-                <span class="error" id="dobError"></span>
-            </div>
-
-            <button type="submit" class="btn-submit">Save Contact</button>
-            <button type="button" id="clearBtn" class="btn-clear">Clear Storage</button>
-        </form>
-
-        <section class="contact-display">
-            <h2>Saved Contact</h2>
-            <div id="contactInfo" class="contact-info">
-                <p class="no-contact">No contact information saved</p>
-            </div>
-        </section>
+            <ul id="todoList" class="todo-list">
+                <li class="loading">Loading to-do items...</li>
+            </ul>
+        </div>
     </div>
-
-    <script type="module" src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

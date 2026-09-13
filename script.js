@@ -1,116 +1,125 @@
-// script.js - Main application module
-import { Contact } from './contact.js';
+const API_BASE = 'https://jsonplaceholder.typicode.com';
+let users = [];
+let currentUserId = null;
 
-const form = document.getElementById('contactForm');
-const contactInfo = document.getElementById('contactInfo');
-const clearBtn = document.getElementById('clearBtn');
+// DOM Elements
+const userSelect = document.getElementById('userSelect');
+const todoList = document.getElementById('todoList');
+const selectedUserName = document.getElementById('selectedUserName');
+const totalTasks = document.getElementById('totalTasks');
+const completedTasks = document.getElementById('completedTasks');
+const remainingTasks = document.getElementById('remainingTasks');
 
-const STORAGE_KEY = 'contactInfo';
+// Initialize app
+document.addEventListener('DOMContentLoaded', () => {
+    loadUsers();
+});
 
-// Initialize the app
-function init() {
-    loadContactFromStorage();
-    form.addEventListener('submit', handleFormSubmit);
-    clearBtn.addEventListener('click', handleClearStorage);
-}
-
-// Handle form submission
-function handleFormSubmit(e) {
-    e.preventDefault();
-    clearErrors();
-
+// Load users from API
+async function loadUsers() {
     try {
-        const email = document.getElementById('email').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const zipcode = document.getElementById('zipcode').value.trim();
-        const dob = document.getElementById('dob').value;
-
-        // Create a new Contact object with validation
-        const contact = new Contact(email, phone, zipcode, dob);
-
-        // Save to session storage
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(contact.toJSON()));
-
-        // Display the contact
-        displayContact(contact);
-
-        // Reset form
-        form.reset();
-    } catch (error) {
-        displayError(error.message);
-    }
-}
-
-// Display contact information
-function displayContact(contact) {
-    const info = contact.getDisplayInfo();
-    
-    const html = `
-        <div class="contact-card">
-            <p><strong>Email:</strong> ${info.email}</p>
-            <p><strong>Phone:</strong> ${info.phone}</p>
-            <p><strong>Zip Code:</strong> ${info.zipcode}</p>
-            <p><strong>Date of Birth:</strong> ${info.dateOfBirth}</p>
-            <p><strong>Age:</strong> ${info.age}</p>
-        </div>
-    `;
-    
-    contactInfo.innerHTML = html;
-}
-
-// Load contact from session storage
-function loadContactFromStorage() {
-    const data = sessionStorage.getItem(STORAGE_KEY);
-    
-    if (data) {
-        try {
-            const contactData = JSON.parse(data);
-            const contact = Contact.fromJSON(contactData);
-            displayContact(contact);
-        } catch (error) {
-            console.error('Error loading contact from storage:', error);
+        const response = await fetch(`${API_BASE}/users`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        users = await response.json();
+        
+        // Populate the select dropdown
+        userSelect.innerHTML = '';
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.name;
+            userSelect.appendChild(option);
+        });
+        
+        // Set first user as default and load their todos
+        if (users.length > 0) {
+            userSelect.value = users[0].id;
+            loadTodos(users[0].id);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        userSelect.innerHTML = '<option>Error loading users</option>';
     }
 }
 
-// Handle clear storage
-function handleClearStorage() {
-    sessionStorage.removeItem(STORAGE_KEY);
-    form.reset();
-    contactInfo.innerHTML = '<p class="no-contact">No contact information saved</p>';
-    clearErrors();
+// Load todos for selected user
+async function loadTodos(userId) {
+    currentUserId = userId;
+    const user = users.find(u => u.id == userId);
+    
+    if (!user) return;
+    
+    selectedUserName.textContent = user.name;
+    todoList.innerHTML = '<li class="loading">Loading to-do items...</li>';
+    
+    try {
+        const response = await fetch(`${API_BASE}/todos?userId=${userId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const todos = await response.json();
+        
+        displayTodos(todos);
+        updateStats(todos);
+    } catch (error) {
+        console.error('Error loading todos:', error);
+        todoList.innerHTML = `<div class="error">Error loading to-do items. Please try again.</div>`;
+    }
 }
 
-// Clear error messages
-function clearErrors() {
-    const errorSpans = document.querySelectorAll('.error');
-    errorSpans.forEach(span => {
-        span.textContent = '';
-        span.style.display = 'none';
+// Display todos in the list
+function displayTodos(todos) {
+    if (todos.length === 0) {
+        todoList.innerHTML = '<li class="loading">No tasks for this user.</li>';
+        return;
+    }
+    
+    todoList.innerHTML = '';
+    todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'todo-checkbox';
+        checkbox.checked = todo.completed;
+        checkbox.addEventListener('change', () => {
+            li.classList.toggle('completed');
+            updateStats(todos);
+        });
+        
+        const todoText = document.createElement('span');
+        todoText.className = 'todo-text';
+        todoText.textContent = todo.title;
+        
+        const status = document.createElement('span');
+        status.className = `todo-status ${todo.completed ? 'completed' : 'pending'}`;
+        status.textContent = todo.completed ? 'Completed' : 'Pending';
+        
+        li.appendChild(checkbox);
+        li.appendChild(todoText);
+        li.appendChild(status);
+        todoList.appendChild(li);
     });
 }
 
-// Display error message
-function displayError(message) {
-    // Try to determine which field has the error
-    let errorField = 'emailError'; // default
-
-    if (message.includes('email')) {
-        errorField = 'emailError';
-    } else if (message.includes('Phone')) {
-        errorField = 'phoneError';
-    } else if (message.includes('Zip')) {
-        errorField = 'zipcodeError';
-    } else if (message.includes('date')) {
-        errorField = 'dobError';
-    }
-
-    const errorSpan = document.getElementById(errorField);
-    if (errorSpan) {
-        errorSpan.textContent = message;
-        errorSpan.style.display = 'block';
-    }
+// Update task statistics
+function updateStats(todos) {
+    const completed = todos.filter(t => t.completed).length;
+    const total = todos.length;
+    const remaining = total - completed;
+    
+    totalTasks.textContent = total;
+    completedTasks.textContent = completed;
+    remainingTasks.textContent = remaining;
 }
 
-// Start the app
-init();
+// Event listener for user selection
+userSelect.addEventListener('change', (e) => {
+    const userId = e.target.value;
+    if (userId) {
+        loadTodos(userId);
+    }
+});
